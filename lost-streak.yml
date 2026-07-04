@@ -1,0 +1,43 @@
+name: LOST contribution streak
+
+on:
+  schedule:
+    # Runs daily at 12:00 UTC. Change if you want a different time of day.
+    - cron: '0 12 * * *'
+  workflow_dispatch: {}   # lets you manually trigger a run to test
+
+permissions:
+  contents: write
+
+jobs:
+  commit-if-needed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if today is a "pixel" day and commit
+        env:
+          GIT_USER_NAME: ${{ vars.GIT_USER_NAME }}
+          GIT_USER_EMAIL: ${{ vars.GIT_USER_EMAIL }}
+        run: |
+          set -e
+          TODAY=$(date -u +%F)
+          echo "Today (UTC): $TODAY"
+
+          if grep -q "\"$TODAY\"" on_dates.json; then
+            echo "Today is a pixel day — committing."
+            git config user.name "${GIT_USER_NAME:-github-actions[bot]}"
+            git config user.email "${GIT_USER_EMAIL:-github-actions[bot]@users.noreply.github.com}"
+
+            mkdir -p progress
+            echo "LOST streak commit: $TODAY" >> progress/log.txt
+
+            git add progress/log.txt
+            git commit -m "LOST streak: $TODAY"
+            git push
+          else
+            echo "Not a pixel day — nothing to commit."
+          fi
